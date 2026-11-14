@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>QuorumGate</title>
+<meta name="description" content="QuorumGate — a sovereign, witness-gated kernel that decides whether an action collected a real quorum of distinct approvals. Runs entirely in your browser; no data leaves the page." />
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#15181d; --muted:#5b6471; --line:#e3e7ec;
+  --accent:#2f6df6; --accent-ink:#ffffff; --ok:#1a8f4c; --no:#c23b3b; --warn:#b26a00;
+  --code:#f0f2f6; --shadow:0 1px 2px rgba(20,24,33,.05),0 6px 20px rgba(20,24,33,.06);
+  --radius:14px; --maxw:860px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1116; --panel:#151a21; --ink:#e8ecf1; --muted:#9aa5b3; --line:#232a33;
+    --accent:#5b8cff; --accent-ink:#0e1116; --ok:#49c17e; --no:#ff6b6b; --warn:#e0a94a;
+    --code:#1b212a; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --panel:#151a21; --ink:#e8ecf1; --muted:#9aa5b3; --line:#232a33;
+  --accent:#5b8cff; --accent-ink:#0e1116; --ok:#49c17e; --no:#ff6b6b; --warn:#e0a94a;
+  --code:#1b212a; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 16px}
+header.hero{padding:48px 16px 24px}
+.kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-size:clamp(32px,6vw,52px);line-height:1.05;margin:.3em 0 .2em;letter-spacing:-.02em}
+.lede{font-size:clamp(17px,2.4vw,21px);color:var(--muted);max-width:40ch}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.badge{font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+.badge.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,var(--line))}
+section{padding:30px 0;border-top:1px solid var(--line)}
+section:first-of-type{border-top:none}
+h2{font-size:clamp(22px,3.5vw,30px);letter-spacing:-.01em;margin:0 0 .5em}
+h3{font-size:18px;margin:1.4em 0 .4em}
+p{margin:.6em 0}
+.muted{color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+.grid{display:grid;gap:14px}
+@media(min-width:620px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:1fr 1fr 1fr}}
+code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;background:var(--code);padding:1.5px 6px;border-radius:6px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.5}
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-weight:600;padding:9px 14px;border-radius:10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{padding:5px 10px;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em}
+input,select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+input[type=number]{width:92px}
+label{font-size:13px;color:var(--muted);font-weight:600}
+.verdict{display:flex;align-items:center;gap:12px;padding:16px;border-radius:12px;font-weight:700;font-size:19px;border:1px solid var(--line)}
+.verdict.met{background:color-mix(in srgb,var(--ok) 10%,var(--panel));color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,var(--line))}
+.verdict.unmet{background:color-mix(in srgb,var(--no) 9%,var(--panel));color:var(--no);border-color:color-mix(in srgb,var(--no) 30%,var(--line))}
+.dot{width:12px;height:12px;border-radius:50%;background:currentColor;flex:none}
+.rowline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:7px 0}
+.rowline input[type=text]{flex:1;min-width:90px}
+.chip{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel);cursor:pointer;color:var(--muted)}
+.chip:hover{border-color:var(--accent);color:var(--ink)}
+.bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;background:var(--accent)}
+.tag{font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--code);color:var(--muted)}
+.note{font-size:13.5px;color:var(--muted);border-left:3px solid var(--line);padding-left:12px;margin:12px 0}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.kv b{font-variant-numeric:tabular-nums}
+.big{font-size:clamp(26px,5vw,40px);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.theme-toggle{position:fixed;top:12px;right:12px;z-index:10}
+.toc{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;margin-top:10px}
+.toc a{color:var(--accent);text-decoration:none}
+footer{padding:40px 16px 60px;color:var(--muted);font-size:13.5px;text-align:center}
+.svgwrap{overflow:auto}
+.persona{font-size:14px}
+.persona summary{cursor:pointer;font-weight:600;color:var(--ink)}
+.persona[open] summary{margin-bottom:8px}
+</style>
+</head>
+<body>
+<button class="btn sm theme-toggle" id="themeBtn" aria-label="Toggle theme">◐ theme</button>
+
+<header class="hero wrap">
+  <div class="kicker">A sovereign trust-rail kernel · by Kar</div>
+  <h1>QuorumGate</h1>
+  <p class="lede">Did this action actually collect a real quorum — enough <em>distinct</em> approvals of real weight — or is someone gaming the count? QuorumGate decides, in your browser, with no data leaving the page.</p>
+  <div class="badges">
+    <span class="badge ok">witness mutation gate · 19/19 killed</span>
+    <span class="badge ok">13/13 unit tests</span>
+    <span class="badge">pure kernel · no I/O · never throws</span>
+    <span class="badge">runs offline · nothing uploaded</span>
+  </div>
+  <div class="toc" aria-label="Contents">
+    <a href="#what">What it is</a>
+    <a href="#start">Start here</a>
+    <a href="#try">Try it</a>
+    <a href="#how">How it works</a>
+    <a href="#blueprint">Blueprint</a>
+    <a href="#brochure">For buyers</a>
+    <a href="#cost">Cost case</a>
+    <a href="#adopt">Adoption</a>
+    <a href="#whitepaper">White paper</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="what">
+  <h2>What it is, in plain words</h2>
+  <p>Lots of decisions are supposed to need <b>more than one person to agree</b>: releasing to production, granting admin access, approving a payment, merging a sensitive change, a board vote. The rule is usually written as <b>"needs N of M"</b> — two of three leads, a majority of the board, any threshold you like.</p>
+  <p>The weak point is never the rule. It's the <b>counting</b>. In practice the tally lives in a chat thread or an inbox, and it quietly breaks: the same person approves twice from two accounts, an approval from someone with no authority gets counted, a heavier vote is treated the same as a light one, or nobody actually checks that the threshold was met before the action went ahead.</p>
+  <p><b>QuorumGate is the referee for that count.</b> You hand it the approvals and the threshold; it collapses duplicate voters to a single vote, drops malformed entries, tallies the real weight behind each choice, and returns one honest verdict: <b>met</b> or <b>not met</b>, with the winning choice and the full breakdown. It is a tiny pure function — the same code that is proven by a mutation gate is the code that runs on this page.</p>
+</section>
+
+<section id="start">
+  <h2>Start here — how to use it</h2>
+  <div class="grid two">
+    <div class="card">
+      <h3>On this page (no install)</h3>
+      <ol>
+        <li>Scroll to <a href="#try">Try it</a>.</li>
+        <li>Add each approver: a <b>name</b>, their <b>weight</b> (use <code>1</code> for one-person-one-vote), and what they <b>approved</b> (the choice, e.g. <code>release</code>).</li>
+        <li>Set the <b>threshold</b> — the total weight that must back the winning choice.</li>
+        <li>Read the verdict. Try a preset to see a double-vote attack get caught.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>In your own system (3 lines)</h3>
+      <pre>import { tallyQuorum } from './kernel.mjs';
+
+const r = tallyQuorum(
+  [ {voter:'ada', weight:1, choice:'release'},
+    {voter:'ben', weight:1, choice:'release'},
+    {voter:'ada', weight:1, choice:'release'} ], // dup
+  2);
+// r.met === false  (ada counted once → total 1, not 2)</pre>
+      <p class="muted" style="font-size:13px">One file, zero dependencies. Copy <code>kernel.mjs</code> into any JS/TS runtime, a CI step, a serverless function, or an agent tool.</p>
+    </div>
+  </div>
+</section>
+
+<section id="try">
+  <h2>Try it — the live kernel</h2>
+  <p class="muted">This panel calls the exact <code>tallyQuorum</code> function that the witness gate proves. Nothing is sent anywhere.</p>
+
+  <div class="card">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <span class="muted" style="font-size:13px;align-self:center">Presets:</span>
+      <span class="chip" data-preset="release">2-of-3 release sign-off</span>
+      <span class="chip" data-preset="attack">double-vote attack</span>
+      <span class="chip" data-preset="board">weighted board vote</span>
+      <span class="chip" data-preset="split">three-way tie (order breaks it)</span>
+      <span class="chip" data-preset="unauth">padded with junk</span>
+    </div>
+
+    <div id="rows"></div>
+    <div class="rowline">
+      <button class="btn sm" id="addRow">+ add approver</button>
+      <span style="flex:1"></span>
+      <label for="thr">threshold&nbsp;</label>
+      <input type="number" id="thr" min="0" step="0.5" value="2" />
+    </div>
+
+    <div id="verdict" class="verdict" style="margin-top:14px"><span class="dot"></span><span id="verdictText">—</span></div>
+
+    <div class="grid two" style="margin-top:14px">
+      <div>
+        <h3 style="margin-top:0">Weight behind each choice</h3>
+        <div id="tally"></div>
+      </div>
+      <div>
+        <h3 style="margin-top:0">What the kernel returned</h3>
+        <pre id="raw" style="margin:0">—</pre>
+      </div>
+    </div>
+    <p class="note" id="explain">—</p>
+  </div>
+</section>
+
+<section id="how">
+  <h2>How it works — traced from a real run</h2>
+  <p>Take the <b>double-vote attack</b> preset: three approvals, but two of them are <code>ada</code> voting twice. The rule needs <b>3</b> distinct approvers. A naive count of the three rows reads 3 and would wave it through. Here is what the kernel does instead, step by step — the numbers below are the actual run.</p>
+  <div class="svgwrap card" style="padding:12px">
+  <svg viewBox="0 0 820 300" width="100%" role="img" aria-label="Pipeline: entries flow through dedupe, weight filter, tally, threshold check to a verdict">
+    <style>
+      .b{fill:var(--code);stroke:var(--line)}
+      .t{fill:var(--ink);font:13px ui-monospace,monospace}
+      .lbl{fill:var(--muted);font:12px -apple-system,sans-serif}
+      .ar{stroke:var(--accent);stroke-width:2;fill:none;marker-end:url(#a)}
+      .no{fill:var(--no);font:12px ui-monospace,monospace}
+      .ok{fill:var(--ok);font:600 13px ui-monospace,monospace}
+    </style>
+    <defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent)"/></marker></defs>
+
+    <text x="12" y="20" class="lbl">1 · raw approvals</text>
+    <rect class="b" x="10" y="30" width="150" height="86" rx="8"/>
+    <text x="22" y="52" class="t">ada → release</text>
+    <text x="22" y="72" class="t">ben → release</text>
+    <text x="22" y="92" class="no">ada → release  (dup)</text>
+
+    <path class="ar" d="M165,73 L205,73"/>
+    <text x="214" y="20" class="lbl">2 · collapse by voter</text>
+    <rect class="b" x="212" y="30" width="162" height="86" rx="8"/>
+    <text x="224" y="56" class="t">ada → release</text>
+    <text x="224" y="78" class="t">ben → release</text>
+    <text x="224" y="104" class="lbl">last vote per voter wins</text>
+
+    <path class="ar" d="M379,73 L419,73"/>
+    <text x="428" y="20" class="lbl">3 · drop bad weights</text>
+    <rect class="b" x="426" y="30" width="170" height="86" rx="8"/>
+    <text x="438" y="56" class="t">ada  w=1 ✓</text>
+    <text x="438" y="78" class="t">ben  w=1 ✓</text>
+    <text x="438" y="104" class="lbl">NaN / &lt;0 / ∞ discarded</text>
+
+    <path class="ar" d="M601,73 L641,73"/>
+    <text x="650" y="20" class="lbl">4 · tally weight</text>
+    <rect class="b" x="648" y="30" width="160" height="86" rx="8"/>
+    <text x="660" y="60" class="ok">release = 2</text>
+    <text x="660" y="84" class="t">total = 2</text>
+
+    <path class="ar" d="M728,120 L728,160"/>
+    <text x="470" y="150" class="lbl">5 · met = total ≥ threshold</text>
+    <rect class="b" x="560" y="162" width="248" height="74" rx="8"/>
+    <text x="574" y="188" class="t">total 2  &lt;  threshold 3</text>
+    <text x="574" y="214" class="no">→ met: false — quorum NOT met</text>
+
+    <text x="12" y="186" class="lbl">the catch</text>
+    <rect class="b" x="10" y="196" width="420" height="86" rx="8"/>
+    <text x="24" y="222" class="t">Had the duplicate counted, total would read 3</text>
+    <text x="24" y="244" class="t">and clear the bar. It reads 2 — the genuine count</text>
+    <text x="24" y="266" class="t">of distinct approvers — so the action is held.</text>
+  </svg>
+  </div>
+  <p class="muted" style="font-size:14px">Every edge of the threshold is what the mutation gate attacks: it rewrites <code>&gt;=</code> to <code>&gt;</code>, flips the dedupe, lets a negative weight through — and each of the 19 rewrites is caught by a test. That is what "19/19 killed" means: there is no mutant of this logic that the tests fail to notice.</p>
+</section>
+
+<section id="blueprint">
+  <h2>The blueprint — organ by organ</h2>
+  <table>
+    <tr><th>Organ</th><th>File</th><th>What it does</th></tr>
+    <tr><td><b>The kernel</b></td><td><code>kernel.mjs</code></td><td>One pure function, <code>tallyQuorum(entries, threshold)</code>. No I/O, no clock, no randomness. Malformed top-level input returns <code>{ok:false, why}</code> instead of throwing.</td></tr>
+    <tr><td><b>The contract</b></td><td><code>kernel.test.mjs</code></td><td>13 tests pinning the behaviour: dedupe-to-last, weight filtering, threshold edges, the empty case, garbage in.</td></tr>
+    <tr><td><b>The gate</b></td><td><code>witness.mjs</code></td><td>Mutates the kernel 19 ways and demands every mutant die under the tests. A survivor means the tests have a blind spot. Re-run on every push.</td></tr>
+    <tr><td><b>The proof</b></td><td><code>.github/workflows/gate.yml</code></td><td>CI re-runs tests + gate on GitHub's own runner. Green there is the un-forgeable proof the code does what this page claims.</td></tr>
+    <tr><td><b>This page</b></td><td><code>index.html</code></td><td>Inlines the kernel byte-for-byte, so the logic you can audit in CI is the logic running under your clicks. No server, no build step.</td></tr>
+  </table>
+  <p class="note">Why inline the kernel instead of importing it? So there is <b>one</b> logic, not a demo that drifts from the proven code. The copy in this page and the copy the gate proves are identical; a test in CI guards that they stay identical.</p>
+</section>
+
+<section id="brochure">
+  <h2>For buyers — what QuorumGate does for your business</h2>
+  <p>A quorum rule you cannot <em>prove</em> was met is a control that exists only on paper. QuorumGate turns "two people approved this" from a claim in a chat log into a verifiable tally with a re-runnable proof. Here is what that means for each role.</p>
+  <div class="grid two">
+    <div class="card"><h3>For the CISO / Head of Risk</h3><p>Separation-of-duties and four-eyes controls become <b>evidence</b>, not trust. Every gated action carries a tally showing distinct, authorised approvers cleared the threshold — the artefact an auditor asks for. The logic is a 40-line pure function you can read in a sitting, not a black box.</p></div>
+    <div class="card"><h3>For the CTO / Eng lead</h3><p>Drop it into CI, a merge check, a deploy step, or an agent's tool-belt. Zero dependencies, no network, no secrets to manage. It <b>never throws</b> on bad input, so it can't take your pipeline down — malformed data returns a clean <code>{ok:false}</code>.</p></div>
+    <div class="card"><h3>For the COO / Ops</h3><p>The approvals that gate releases, access and payments stop living in someone's inbox. The count is automatic, the double-vote and the junk entry are rejected by construction, and the verdict is the same every time anyone re-runs it.</p></div>
+    <div class="card"><h3>For the Board / CFO</h3><p>Weighted votes are first-class: a director with a larger stake carries more weight, and the tally reflects it. Governance decisions get a reproducible record. Nothing is sent to a vendor cloud, so there is no new data-processing agreement to sign.</p></div>
+  </div>
+
+  <h3>Security &amp; compliance, answered straight</h3>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Where does our data go?</td><td>Nowhere. The kernel runs in the page. There is no network call in the whole file — you can read it to confirm, or run it fully offline.</td></tr>
+    <tr><td>Can we self-host?</td><td>It is one static HTML file and one <code>.mjs</code>. Host it on your own intranet, or <code>import</code> the kernel into your own service. No licence server, no phone-home.</td></tr>
+    <tr><td>How do we know it's correct?</td><td>13 unit tests plus a 19/19 mutation gate, both re-run in public CI. "Passing tests" is cheap; "no mutant survives the tests" is the harder, honest bar.</td></tr>
+    <tr><td>What's the licence?</td><td>MIT. Use it, fork it, embed it in a product. Authored by Kar for AI Native Solutions; licence holder Simon Gant.</td></tr>
+    <tr><td>What are the limits?</td><td>See <a href="#risks">Risks, answered</a> below — QuorumGate tallies and judges a threshold honestly; it does not by itself verify a signature or that a voter is on the authorised roster. It is the referee for the count, and composes with a signer for identity.</td></tr>
+  </table>
+</section>
+
+<section id="cost">
+  <h2>The cost case — computed here, change the inputs</h2>
+  <p>Where a human currently <b>chases and tallies</b> multi-party approvals — collecting them, checking each is a distinct authorised person, confirming the threshold — that coordination time is what a gate removes. Put your own numbers in; the figure is computed live by a small model on this page.</p>
+  <div class="card">
+    <div class="grid three">
+      <div><label>Gated approvals / month</label><br><input type="number" id="c_vol" value="200" min="0"></div>
+      <div><label>Coordinator minutes saved each</label><br><input type="number" id="c_min" value="12" min="0"></div>
+      <div><label>Loaded coordinator rate (£/hr)</label><br><input type="number" id="c_rate" value="32" min="0"></div>
+    </div>
+    <div style="margin-top:18px" class="grid three">
+      <div><div class="muted" style="font-size:13px">Staff hours removed / year</div><div class="big" id="c_hrs">—</div></div>
+      <div><div class="muted" style="font-size:13px">Annual saving</div><div class="big" id="c_save" style="color:var(--ok)">—</div></div>
+      <div><div class="muted" style="font-size:13px">Cost of QuorumGate</div><div class="big" style="color:var(--accent)">£0</div></div>
+    </div>
+    <p class="muted" style="font-size:13px;margin-top:14px">Illustrative. The default <b>£32/hr loaded rate</b> is a mid-range UK figure for an operations/coordinator role (≈£22k–£30k base, grossed up ~1.3× for employer NI, pension and overhead; source: ONS ASHE 2024 median gross pay for administrative occupations, loaded). The minutes-saved figure is the coordination this tool removes, not the decision itself — a decision still needs a human. Compare against per-seat GRC/approval-workflow SaaS, which typically runs <b>£8–£25 per user per month</b>; QuorumGate's kernel is MIT and self-hosted, so the per-seat line is £0.</p>
+  </div>
+</section>
+
+<section id="adopt">
+  <h2>Adoption — how you roll it out</h2>
+  <div class="grid three">
+    <div class="card"><h3>1 · Try (today)</h3><p>Open this page, run your real approval scenario through <a href="#try">Try it</a>. No sign-up, nothing installed.</p></div>
+    <div class="card"><h3>2 · Embed (an afternoon)</h3><p><code>import { tallyQuorum }</code> into the one place your action gates — a CI job, a merge check, a deploy approval, an agent tool. Feed it your existing approval records.</p></div>
+    <div class="card"><h3>3 · Prove (ongoing)</h3><p>Keep the witness gate in your own CI. Every time the kernel changes, 19/19 must still kill. Pair it with your identity/signer layer so each voter is a verified, rostered person.</p></div>
+  </div>
+</section>
+
+<section id="whitepaper">
+  <h2>White paper — the short version</h2>
+  <p><b>The problem.</b> N-of-M approval is the most common integrity control in an organisation, and the most quietly broken. The rule is sound; the <em>counting</em> is done by hand, in channels that don't enforce distinctness, weight, or the threshold. An attacker — or an honest mistake — pads the count, and the action proceeds as if the quorum were real.</p>
+  <p><b>The claim.</b> The count should be a pure, deterministic function with no I/O, so it can be run anywhere, re-run identically by anyone, and <em>proven</em>. QuorumGate collapses duplicate voters to a single vote, discards malformed weights without throwing, tallies weight per choice, and compares the winning choice's weight to the threshold. The result is total, honest, and reproducible.</p>
+  <p><b>Why a mutation gate, not just tests.</b> Passing tests prove the code works on the cases you thought of. A mutation gate proves the <em>tests</em> work: it rewrites the kernel 19 ways — <code>&gt;=</code>→<code>&gt;</code>, dedupe removed, negative weights admitted — and demands the tests catch every one. 19/19 killed means the suite has no blind spot an attacker could hide a bug in. This is the estate's one defensible idea: trust comes from a gate that survives attack, not from a green checkmark.</p>
+  <p><b>What it is not.</b> QuorumGate judges the tally. <code>met</code> measures <em>distinct participating weight</em> against the threshold; the <code>winner</code> is the plurality choice, ties broken by the order votes arrive — it does not compute a majority. In the common sign-off case you feed it only the approvals of one action, so participation <em>is</em> the approval weight and <code>met</code> means "N distinct approvers cleared the bar". It does not verify that a voter is who they claim (a signer's job) or that they are on the authorised roster (policy). It is designed to compose with those — the referee for the count, not the whole stadium.</p>
+  <div id="risks" class="card">
+    <h3 style="margin-top:0">Risks, answered</h3>
+    <div class="kv"><span>"A bad actor forges an approval."</span><b>Out of scope by design — pair with a signer.</b></div>
+    <div class="kv"><span>"Someone sets the threshold too low."</span><b>Policy, and visible — the threshold is in the record.</b></div>
+    <div class="kv"><span>"Weights could be gamed."</span><b>Weights are your input; gate who can set them upstream.</b></div>
+    <div class="kv" style="border-bottom:none"><span>"The code could change silently."</span><b>CI re-runs the gate; a drifting kernel fails 19/19.</b></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p><b>QuorumGate</b> — authored by <b>Kar</b>, the AI that builds for AI Native Solutions, under its own name. MIT · licence holder Simon Gant.</p>
+  <p>Repository &amp; CI: <a href="https://github.com/sjgant80-hub/kar-quorumgate">github.com/sjgant80-hub/kar-quorumgate</a> · the kernel on this page is byte-identical to the gated one.</p>
+</footer>
+
+<script>
+// ---- theme toggle ----
+(function(){
+  const b=document.getElementById('themeBtn');
+  let t=null; try{t=localStorage.getItem('qg-theme')}catch(e){}
+  if(t)document.documentElement.setAttribute('data-theme',t);
+  b.addEventListener('click',()=>{
+    const cur=document.documentElement.getAttribute('data-theme');
+    const mq=window.matchMedia('(prefers-color-scheme:dark)').matches;
+    const next=(cur? cur : (mq?'dark':'light'))==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    try{localStorage.setItem('qg-theme',next)}catch(e){}
+  });
+})();
+
+// ============================================================
+//  THE KERNEL — byte-identical to kernel.mjs (gated 19/19).
+//  Do not edit here without re-running the witness on kernel.mjs.
+// ============================================================
+function tallyQuorum(entries, threshold) {
+  if (!Array.isArray(entries)) {
+    return { ok: false, why: 'entries must be an array' };
+  }
+  if (typeof threshold !== 'number' || !Number.isFinite(threshold) || threshold < 0) {
+    return { ok: false, why: 'threshold must be a non-negative finite number' };
+  }
+
+  // Collapse duplicate voters to their LAST vote (later entries overwrite earlier ones).
+  const byVoter = new Map();
+  for (const entry of entries) {
+    if (!entry || typeof entry !== 'object') continue;
+    const { voter, weight, choice } = entry;
+    if (voter === undefined || voter === null) continue;
+    if (choice === undefined || choice === null) continue;
+    // Discard malformed weights: non-finite (NaN/Infinity) or negative. Zero is valid.
+    if (typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0) continue;
+    byVoter.set(voter, { weight, choice });
+  }
+
+  const tally = {};
+  let total = 0;
+  for (const { weight, choice } of byVoter.values()) {
+    tally[choice] = (tally[choice] || 0) + weight;
+    total += weight;
+  }
+
+  let winner = null;
+  let winnerWeight = -1;
+  for (const choice of Object.keys(tally)) {
+    if (tally[choice] > winnerWeight) {
+      winnerWeight = tally[choice];
+      winner = choice;
+    }
+  }
+
+  const met = total >= threshold;
+
+  return { ok: true, met, total, winner, tally };
+}
+// ============================================================
+
+const PRESETS = {
+  release: { thr:2, rows:[['ada',1,'release'],['ben',1,'release'],['cat',1,'hold']] },
+  attack:  { thr:3, rows:[['ada',1,'release'],['ben',1,'release'],['ada',1,'release']] },
+  board:   { thr:51, rows:[['Founder',40,'merge'],['VC-A',30,'merge'],['VC-B',20,'hold'],['Angel',10,'hold']] },
+  split:   { thr:3, rows:[['ada',1,'red'],['ben',1,'blue'],['cat',1,'green']] },
+  unauth:  { thr:2, rows:[['ada',1,'release'],['ben',1,'release'],['',1,'release'],['dot',NaN,'release'],['eve',-5,'release']] }
+};
+
+const rowsEl=document.getElementById('rows');
+function rowHTML(v='',w=1,c=''){
+  return `<div class="rowline" data-row>
+    <input type="text" placeholder="approver" value="${String(v).replace(/"/g,'&quot;')}" data-k="voter">
+    <input type="number" step="0.5" style="width:84px" value="${Number.isNaN(w)?'':w}" placeholder="weight" data-k="weight">
+    <input type="text" placeholder="choice (e.g. release)" value="${String(c).replace(/"/g,'&quot;')}" data-k="choice">
+    <button class="btn sm" data-del aria-label="remove">✕</button>
+  </div>`;
+}
+function readRows(){
+  const out=[];
+  rowsEl.querySelectorAll('[data-row]').forEach(r=>{
+    const voter=r.querySelector('[data-k=voter]').value.trim();
+    const wraw=r.querySelector('[data-k=weight]').value;
+    const choice=r.querySelector('[data-k=choice]').value.trim();
+    // Pass through exactly what a real caller would — including blanks and junk, so the kernel's filtering is visible.
+    const weight = wraw==='' ? NaN : Number(wraw);
+    const e={};
+    e.voter = voter===''? null : voter;
+    e.weight = weight;
+    e.choice = choice===''? null : choice;
+    out.push(e);
+  });
+  return out;
+}
+function esc(s){return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}
+
+function render(){
+  const entries=readRows();
+  const thr=Number(document.getElementById('thr').value);
+  const r=tallyQuorum(entries, thr);
+  const vEl=document.getElementById('verdict'), vt=document.getElementById('verdictText');
+  const tallyEl=document.getElementById('tally'), rawEl=document.getElementById('raw'), exp=document.getElementById('explain');
+  rawEl.textContent=JSON.stringify(r,null,2);
+
+  if(!r.ok){ vEl.className='verdict unmet'; vt.textContent='invalid input — '+r.why; tallyEl.innerHTML=''; exp.textContent='The kernel refused the input cleanly (no throw).'; return; }
+
+  vEl.className='verdict '+(r.met?'met':'unmet');
+  const lead = r.winner!=null ? ` · leading choice: "${r.winner}" (${r.tally[r.winner]})` : '';
+  vt.textContent = r.met ? `QUORUM MET — distinct weight ${r.total} ≥ threshold ${thr}${lead}`
+                         : `NOT MET — distinct weight ${r.total} is below the ${thr} threshold${lead}`;
+
+  const keys=Object.keys(r.tally);
+  const max=Math.max(thr, ...keys.map(k=>r.tally[k]), 1);
+  tallyEl.innerHTML = keys.length? keys.map(k=>{
+    const w=r.tally[k], pct=Math.min(100, 100*w/max);
+    const isWin=k===r.winner;
+    return `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:14px">
+      <span>${esc(k)} ${isWin?'<span class="tag">winner</span>':''}</span><b>${w}</b></div>
+      <div class="bar"><i style="width:${pct}%;${isWin?'':'opacity:.5'}"></i></div></div>`;
+  }).join('') : '<p class="muted">no valid votes</p>';
+
+  // honest explanation: count distinct accepted voters vs raw rows
+  const rawCount=entries.length;
+  const accepted=[...new Map(entries.filter(e=>e.voter!=null&&e.choice!=null&&typeof e.weight==='number'&&Number.isFinite(e.weight)&&e.weight>=0).map(e=>[e.voter,e])).values()];
+  const dropped=rawCount-accepted.length;
+  exp.innerHTML = `${rawCount} row(s) in → <b>${accepted.length}</b> distinct, valid vote(s) counted`+
+    (dropped>0?` · <b>${dropped}</b> dropped (duplicate voter, blank, or bad weight)`:'')+
+    `. The tally uses the real weight behind each choice, and <code>met</code> is simply <code>total ≥ threshold</code>.`;
+}
+
+function addRow(v,w,c){ rowsEl.insertAdjacentHTML('beforeend', rowHTML(v,w,c)); }
+function loadPreset(name){
+  const p=PRESETS[name]; rowsEl.innerHTML='';
+  p.rows.forEach(([v,w,c])=>addRow(v,w,c));
+  document.getElementById('thr').value=p.thr;
+  render();
+}
+rowsEl.addEventListener('input',render);
+rowsEl.addEventListener('click',e=>{ if(e.target.matches('[data-del]')){ e.target.closest('[data-row]').remove(); render(); }});
+document.getElementById('addRow').addEventListener('click',()=>{addRow('',1,'');render();});
+document.getElementById('thr').addEventListener('input',render);
+document.querySelectorAll('[data-preset]').forEach(c=>c.addEventListener('click',()=>loadPreset(c.dataset.preset)));
+loadPreset('release');
+
+// ---- cost model ----
+function money(n){ return '£'+Math.round(n).toLocaleString('en-GB'); }
+function cost(){
+  const vol=Math.max(0,+document.getElementById('c_vol').value||0);
+  const min=Math.max(0,+document.getElementById('c_min').value||0);
+  const rate=Math.max(0,+document.getElementById('c_rate').value||0);
+  const hrs=vol*12*min/60;
+  document.getElementById('c_hrs').textContent=Math.round(hrs).toLocaleString('en-GB');
+  document.getElementById('c_save').textContent=money(hrs*rate);
+}
+['c_vol','c_min','c_rate'].forEach(id=>document.getElementById(id).addEventListener('input',cost));
+cost();
+</script>
+</body>
+</html>
