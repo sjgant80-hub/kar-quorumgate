@@ -124,7 +124,7 @@ footer{padding:40px 16px 60px;color:var(--muted);font-size:13.5px;text-align:cen
       <ol>
         <li>Scroll to <a href="#try">Try it</a>.</li>
         <li>Add each approver: a <b>name</b>, their <b>weight</b> (use <code>1</code> for one-person-one-vote), and what they <b>approved</b> (the choice, e.g. <code>release</code>).</li>
-        <li>Set the <b>threshold</b> — the total weight that must back the winning choice.</li>
+        <li>Set the <b>threshold</b> — the total distinct-voter weight that must be cast for the count to clear (<code>met</code> compares the threshold to the <em>total</em> participating weight, not the winning choice alone).</li>
         <li>Read the verdict. Try a preset to see a double-vote attack get caught.</li>
       </ol>
     </div>
@@ -134,10 +134,9 @@ footer{padding:40px 16px 60px;color:var(--muted);font-size:13.5px;text-align:cen
 
 const r = tallyQuorum(
   [ {voter:'ada', weight:1, choice:'release'},
-    {voter:'ben', weight:1, choice:'release'},
-    {voter:'ada', weight:1, choice:'release'} ], // dup
+    {voter:'ada', weight:1, choice:'release'} ], // ada again — not two people
   2);
-// r.met === false  (ada counted once → total 1, not 2)</pre>
+// r.met === false  (ada collapses to one vote → total 1, below the threshold of 2)</pre>
       <p class="muted" style="font-size:13px">One file, zero dependencies. Copy <code>kernel.mjs</code> into any JS/TS runtime, a CI step, a serverless function, or an agent tool.</p>
     </div>
   </div>
@@ -235,7 +234,7 @@ const r = tallyQuorum(
     <text x="24" y="266" class="t">of distinct approvers — so the action is held.</text>
   </svg>
   </div>
-  <p class="muted" style="font-size:14px">Every edge of the threshold is what the mutation gate attacks: it rewrites <code>&gt;=</code> to <code>&gt;</code>, flips the dedupe, lets a negative weight through — and each of the 19 rewrites is caught by a test. That is what "19/19 killed" means: there is no mutant of this logic that the tests fail to notice.</p>
+  <p class="muted" style="font-size:14px">Every edge of the threshold is what the mutation gate attacks: it rewrites <code>&gt;=</code> to <code>&gt;</code>, flips the dedupe, lets a negative weight through — and each of the 19 rewrites is caught by a test. That is what "19/19 killed" means: no mutant among the 19 the tool tried survives the tests — a hard bar on the tests, not a proof the logic is complete.</p>
 </section>
 
 <section id="blueprint">
@@ -245,7 +244,7 @@ const r = tallyQuorum(
     <tr><td><b>The kernel</b></td><td><code>kernel.mjs</code></td><td>One pure function, <code>tallyQuorum(entries, threshold)</code>. No I/O, no clock, no randomness. Malformed top-level input returns <code>{ok:false, why}</code> instead of throwing.</td></tr>
     <tr><td><b>The contract</b></td><td><code>kernel.test.mjs</code></td><td>13 tests pinning the behaviour: dedupe-to-last, weight filtering, threshold edges, the empty case, garbage in.</td></tr>
     <tr><td><b>The gate</b></td><td><code>witness.mjs</code></td><td>Mutates the kernel 19 ways and demands every mutant die under the tests. A survivor means the tests have a blind spot. Re-run on every push.</td></tr>
-    <tr><td><b>The proof</b></td><td><code>.github/workflows/gate.yml</code></td><td>CI re-runs tests + gate on GitHub's own runner. Green there is the un-forgeable proof the code does what this page claims.</td></tr>
+    <tr><td><b>The proof</b></td><td><code>.github/workflows/gate.yml</code></td><td>CI re-runs tests + gate on GitHub's own runner. Green there proves the gated code is the code shipped and that the tests kill the 19 mutations tried — not that every claim on this page holds.</td></tr>
     <tr><td><b>This page</b></td><td><code>index.html</code></td><td>Inlines the kernel byte-for-byte, so the logic you can audit in CI is the logic running under your clicks. No server, no build step.</td></tr>
   </table>
   <p class="note">Why inline the kernel instead of importing it? So there is <b>one</b> logic, not a demo that drifts from the proven code. The copy in this page and the copy the gate proves are identical; a test in CI guards that they stay identical.</p>
@@ -255,7 +254,7 @@ const r = tallyQuorum(
   <h2>For buyers — what QuorumGate does for your business</h2>
   <p>A quorum rule you cannot <em>prove</em> was met is a control that exists only on paper. QuorumGate turns "two people approved this" from a claim in a chat log into a verifiable tally with a re-runnable proof. Here is what that means for each role.</p>
   <div class="grid two">
-    <div class="card"><h3>For the CISO / Head of Risk</h3><p>Separation-of-duties and four-eyes controls become <b>evidence</b>, not trust. Every gated action carries a tally showing distinct, authorised approvers cleared the threshold — the artefact an auditor asks for. The logic is a 40-line pure function you can read in a sitting, not a black box.</p></div>
+    <div class="card"><h3>For the CISO / Head of Risk</h3><p>Separation-of-duties and four-eyes controls become <b>evidence</b>, not trust. Every gated action carries a tally showing the distinct voters and the weight behind each choice — the artefact an auditor asks for. (It does not itself check a voter is <em>authorised</em>; pair it with your roster/signer for that, as the <a href="#whitepaper">white paper</a> states.) The logic is a 40-line pure function you can read in a sitting, not a black box.</p></div>
     <div class="card"><h3>For the CTO / Eng lead</h3><p>Drop it into CI, a merge check, a deploy step, or an agent's tool-belt. Zero dependencies, no network, no secrets to manage. It <b>never throws</b> on bad input, so it can't take your pipeline down — malformed data returns a clean <code>{ok:false}</code>.</p></div>
     <div class="card"><h3>For the COO / Ops</h3><p>The approvals that gate releases, access and payments stop living in someone's inbox. The count is automatic, the double-vote and the junk entry are rejected by construction, and the verdict is the same every time anyone re-runs it.</p></div>
     <div class="card"><h3>For the Board / CFO</h3><p>Weighted votes are first-class: a director with a larger stake carries more weight, and the tally reflects it. Governance decisions get a reproducible record. Nothing is sent to a vendor cloud, so there is no new data-processing agreement to sign.</p></div>
@@ -302,8 +301,8 @@ const r = tallyQuorum(
 <section id="whitepaper">
   <h2>White paper — the short version</h2>
   <p><b>The problem.</b> N-of-M approval is the most common integrity control in an organisation, and the most quietly broken. The rule is sound; the <em>counting</em> is done by hand, in channels that don't enforce distinctness, weight, or the threshold. An attacker — or an honest mistake — pads the count, and the action proceeds as if the quorum were real.</p>
-  <p><b>The claim.</b> The count should be a pure, deterministic function with no I/O, so it can be run anywhere, re-run identically by anyone, and <em>proven</em>. QuorumGate collapses duplicate voters to a single vote, discards malformed weights without throwing, tallies weight per choice, and compares the winning choice's weight to the threshold. The result is total, honest, and reproducible.</p>
-  <p><b>Why a mutation gate, not just tests.</b> Passing tests prove the code works on the cases you thought of. A mutation gate proves the <em>tests</em> work: it rewrites the kernel 19 ways — <code>&gt;=</code>→<code>&gt;</code>, dedupe removed, negative weights admitted — and demands the tests catch every one. 19/19 killed means the suite has no blind spot an attacker could hide a bug in. This is the estate's one defensible idea: trust comes from a gate that survives attack, not from a green checkmark.</p>
+  <p><b>The claim.</b> The count should be a pure, deterministic function with no I/O, so it can be run anywhere, re-run identically by anyone, and <em>proven</em>. QuorumGate collapses duplicate voters to a single vote, discards malformed weights without throwing, tallies weight per choice, and compares the <em>total</em> participating weight to the threshold (<code>met = total &gt;= threshold</code>; the <code>winner</code> is reported separately as the plurality choice). The result is total, honest, and reproducible.</p>
+  <p><b>Why a mutation gate, not just tests.</b> Passing tests prove the code works on the cases you thought of. A mutation gate proves the <em>tests</em> work: it rewrites the kernel 19 ways — <code>&gt;=</code>→<code>&gt;</code>, dedupe removed, negative weights admitted — and demands the tests catch every one. 19/19 killed means the suite catches those 19 rewrites — a hard bar on the tests, not a proof the logic is complete. This is the estate's one defensible idea: trust comes from a gate that survives attack, not from a green checkmark.</p>
   <p><b>What it is not.</b> QuorumGate judges the tally. <code>met</code> measures <em>distinct participating weight</em> against the threshold; the <code>winner</code> is the plurality choice, ties broken by the order votes arrive — it does not compute a majority. In the common sign-off case you feed it only the approvals of one action, so participation <em>is</em> the approval weight and <code>met</code> means "N distinct approvers cleared the bar". It does not verify that a voter is who they claim (a signer's job) or that they are on the authorised roster (policy). It is designed to compose with those — the referee for the count, not the whole stadium.</p>
   <div id="risks" class="card">
     <h3 style="margin-top:0">Risks, answered</h3>
